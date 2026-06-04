@@ -1,0 +1,119 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  password      String
+  role          String        @default("STUDENT") // "STUDENT" | "ADMIN"
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  documents     Document[]
+  proposals     Proposal[]
+  deadlines     Deadline[]
+  matchings     ProfessorMatch[]
+  notifications Notification[]
+}
+
+model Document {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      String    // e.g. "PASSPORT", "TRANSCRIPT", "DEGREE", "RECOMMENDATION_LETTER", "MEDICAL_FORM", "RESEARCH_PROPOSAL", "OTHER"
+  url       String
+  status    String    @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Proposal {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fieldOfStudy        String
+  researchInterest    String
+  problemStatement    String
+  methodology         String
+  expectedOutcome     String
+  generatedTitle      String?
+  background          String?
+  objectives          String?
+  detailedMethodology String?
+  timeline            String?  // JSON string or Text
+  expectedResults     String?
+  clarityScore        Int?
+  originalityScore    Int?
+  feasibilityScore    Int?
+  grammarScore        Int?
+  feedbackRemarks     String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Professor {
+  id               String           @id @default(uuid())
+  name             String
+  university       String
+  researchArea     String
+  keywords         String           // Comma-separated or serialized JSON string
+  labUrl           String?
+  email            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  matches          ProfessorMatch[]
+}
+
+model ProfessorMatch {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  professorId String
+  professor   Professor   @relation(fields: [professorId], references: [id], onDelete: Cascade)
+  matchScore  Int
+  status      String      @default("PENDING") // "PENDING" | "CONTACTED" | "ACCEPTED" | "REJECTED"
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model University {
+  id             String   @id @default(uuid())
+  name           String
+  field          String
+  location       String
+  universityType String   // e.g. "National", "Public", "Private"
+  englishProgram Boolean  @default(true)
+  scholarships   String   // Comma-separated or serialized JSON string
+  website        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Deadline {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
