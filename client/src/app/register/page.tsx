@@ -36,7 +36,8 @@ export default function RegisterPage() {
       await signup(name, email, password);
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      const message = typeof err === 'string' ? err : (err && (err as any).message) || 'Registration failed';
+      setError(message);
     } finally {
       setSubmitting(false);
     }

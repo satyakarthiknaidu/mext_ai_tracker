@@ -1,13 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-export async function request(path: string, options: RequestInit = {}) {
+export async function request<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('mext_token') : null;
-  
+
   const headers = new Headers(options.headers);
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
+
+  const hasBody = options.body !== undefined && options.body !== null;
+  if (hasBody && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -17,24 +19,26 @@ export async function request(path: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `API error: ${response.status}`);
+    const errorData = await response.json().catch(() => ({} as Record<string, unknown>));
+    const message = (errorData && (errorData as any).message) || `API error: ${response.status}`; 
+    throw new Error(String(message));
   }
 
-  return response.json();
+  const json = await response.json().catch(() => ({}));
+  return json as T;
 }
 
 export const api = {
-  get: (path: string, options?: RequestInit) => request(path, { ...options, method: 'GET' }),
-  post: (path: string, body: any, options?: RequestInit) => request(path, {
+  get: <T = unknown>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: 'GET' }),
+  post: <T = unknown>(path: string, body?: unknown, options?: RequestInit) => request<T>(path, {
     ...options,
     method: 'POST',
-    body: body instanceof FormData ? body : JSON.stringify(body),
+    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   }),
-  put: (path: string, body: any, options?: RequestInit) => request(path, {
+  put: <T = unknown>(path: string, body?: unknown, options?: RequestInit) => request<T>(path, {
     ...options,
     method: 'PUT',
-    body: body instanceof FormData ? body : JSON.stringify(body),
+    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
   }),
-  delete: (path: string, options?: RequestInit) => request(path, { ...options, method: 'DELETE' }),
+  delete: <T = unknown>(path: string, options?: RequestInit) => request<T>(path, { ...options, method: 'DELETE' }),
 };

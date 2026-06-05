@@ -11,7 +11,6 @@ import {
   Clock,
   Plus,
   Loader2,
-  FileWarning,
 } from 'lucide-react';
 
 const REQUIRED_DOCS = [
@@ -23,33 +22,42 @@ const REQUIRED_DOCS = [
   { type: 'RESEARCH_PROPOSAL', label: 'Research Proposal Draft' },
 ];
 
+interface DocumentItem {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  status: 'PENDING' | 'APPROVED' | string;
+}
+
 export default function DocumentsPage() {
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [uploadingType, setUploadingType] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
-
-  const fetchDocuments = async () => {
+  async function fetchDocuments() {
     try {
-      const data = await api.get('/documents');
-      setDocuments(data);
-    } catch (err) {
+      const data = await api.get<DocumentItem[]>('/documents');
+      setDocuments(data || []);
+    } catch (err: unknown) {
       console.error('Failed to load documents', err);
-      setError('Could not retrieve uploaded documents.');
+      setError(
+        typeof err === 'string' ? err : (err && (err as any).message) || 'Could not retrieve uploaded documents.'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  useEffect(() => {
+    void fetchDocuments();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      handleUpload(file, type);
+      void handleUpload(file, type);
     }
   };
 
@@ -64,7 +72,7 @@ export default function DocumentsPage() {
       await api.post('/documents/upload', formData);
       await fetchDocuments();
     } catch (err: any) {
-      setError(err.message || 'File upload failed');
+      setError((err && err.message) || 'File upload failed');
     } finally {
       setUploadingType(null);
     }
@@ -76,11 +84,11 @@ export default function DocumentsPage() {
       await api.delete(`/documents/${id}`);
       await fetchDocuments();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete file');
+      setError((err && err.message) || 'Failed to delete file');
     }
   };
 
-  const getUploadedDoc = (type: string) => {
+  const getUploadedDoc = (type: string): DocumentItem | undefined => {
     return documents.find((doc) => doc.type === type);
   };
 
