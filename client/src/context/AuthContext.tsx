@@ -10,6 +10,9 @@ interface User {
   role: string;
 }
 
+const TOKEN_STORAGE_KEY = 'mext_token';
+const USER_STORAGE_KEY = 'mext_user';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -26,16 +29,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function loadUser() {
-      const token = localStorage.getItem('mext_token');
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      const cachedUser = localStorage.getItem(USER_STORAGE_KEY);
+
+      if (cachedUser) {
+        try {
+          setUser(JSON.parse(cachedUser));
+        } catch {
+          localStorage.removeItem(USER_STORAGE_KEY);
+        }
+      }
+
       if (token) {
         try {
           const profile = await api.get('/auth/me');
           setUser(profile);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(profile));
         } catch (error) {
           console.error('Failed to load user profile', error);
-          localStorage.removeItem('mext_token');
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setUser(null);
         }
       }
+
       setLoading(false);
     }
     loadUser();
@@ -45,7 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const data = await api.post('/auth/login', { email, password });
-      localStorage.setItem('mext_token', data.token);
+      localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       setUser(data.user);
     } finally {
       setLoading(false);
@@ -56,7 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const data = await api.post('/auth/signup', { name, email, password });
-      localStorage.setItem('mext_token', data.token);
+      localStorage.setItem(TOKEN_STORAGE_KEY, data.token);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
       setUser(data.user);
     } finally {
       setLoading(false);
@@ -64,7 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('mext_token');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(USER_STORAGE_KEY);
     setUser(null);
   };
 

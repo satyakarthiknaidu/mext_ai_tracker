@@ -19,7 +19,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const data = await api.get('/dashboard/summary');
+        const data = await api.get<any>('/dashboard/summary');
         setStats(data);
       } catch (err) {
         console.warn('Failed to load dashboard summary, using fallback stats', err);
